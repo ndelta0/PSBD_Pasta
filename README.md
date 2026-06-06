@@ -29,6 +29,19 @@ npm run dev
 npm run dev -- --open
 ```
 
+## Authentication
+
+The app now includes:
+
+- `Login` and `Register` screens
+- a clickable profile card in the sidebar that opens the account page
+- a logout button on the profile page
+
+A demo account is pre-seeded for quick access:
+
+- E-mail: `jan.kowalski@example.com`
+- Hasło: `test1234`
+
 ## Building
 
 To create a production version of your app:
