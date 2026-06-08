@@ -2,7 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { onMount } from 'svelte';
-	import { currentUserStore, logoutAccount, type AuthSummary } from '$lib/auth';
+	import { type AuthSummary, currentUserStore, logoutAccount } from '$lib/auth';
 
 	let currentUser = $state<AuthSummary | null>(null);
 	let isReady = $state(false);
@@ -69,5 +69,3 @@
 		{/if}
 	</article>
 </section>
-
-

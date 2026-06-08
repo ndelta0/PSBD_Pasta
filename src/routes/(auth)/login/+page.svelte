@@ -1,29 +1,10 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
+	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
-	import { loginAccount, type LoginPayload } from '$lib/auth';
+	import type { ActionData } from './$types';
 
-	let form = $state<LoginPayload>({
-		email: 'jan.kowalski@example.com',
-		password: 'test1234'
-	});
-
-	let error = $state('');
+	let { form }: { form: ActionData | undefined } = $props();
 	let isSubmitting = $state(false);
-
-	const submit = () => {
-		error = '';
-		isSubmitting = true;
-
-		try {
-			loginAccount(form);
-			goto(resolve('/'));
-		} catch (problem) {
-			error = problem instanceof Error ? problem.message : 'Nie udało się zalogować.';
-		} finally {
-			isSubmitting = false;
-		}
-	};
 </script>
 
 <svelte:head>
@@ -47,22 +28,50 @@
 		<p>Zaloguj się, aby przejść do swojego panelu.</p>
 	</header>
 
-	<form class="auth-form" onsubmit={(event) => {
-		event.preventDefault();
-		submit();
-	}}>
+	<form
+		aria-busy={isSubmitting}
+		class="auth-form"
+		method="POST"
+		use:enhance={() => {
+			isSubmitting = true;
+			form = undefined;
+
+			return async ({ update }) => {
+				try {
+					await update();
+				} finally {
+					isSubmitting = false;
+				}
+			};
+		}}
+	>
 		<label class="auth-field">
 			<span>E-mail</span>
-			<input bind:value={form.email} type="email" autocomplete="email" required />
+			<input
+				aria-describedby={form?.message ? 'login-error' : undefined}
+				aria-invalid={form?.message ? 'true' : undefined}
+				autocomplete="email"
+				name="email"
+				required
+				type="email"
+				value={form?.email ?? ''}
+			/>
 		</label>
 
 		<label class="auth-field">
 			<span>Hasło</span>
-			<input bind:value={form.password} type="password" autocomplete="current-password" required />
+			<input
+				aria-describedby={form?.message ? 'login-error' : undefined}
+				aria-invalid={form?.message ? 'true' : undefined}
+				autocomplete="current-password"
+				name="password"
+				required
+				type="password"
+			/>
 		</label>
 
-		{#if error}
-			<p class="auth-error" role="alert">{error}</p>
+		{#if form?.message}
+			<p id="login-error" class="auth-error" role="alert">{form.message}</p>
 		{/if}
 
 		<button class="action-button auth-submit" type="submit" disabled={isSubmitting}>
@@ -75,6 +84,3 @@
 		</div>
 	</form>
 </section>
-
-
-
