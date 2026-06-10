@@ -1,23 +1,12 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { onMount } from 'svelte';
-	import { type AuthSummary, currentUserStore, logoutAccount } from '$lib/auth';
 
-	let currentUser = $state<AuthSummary | null>(null);
-	let isReady = $state(false);
+	let { data } = $props();
+	const currentUser = $derived(data.profile);
 
-	onMount(() => {
-		return currentUserStore.subscribe((value) => {
-			currentUser = value;
-			isReady = true;
-		});
-	});
-
-	const handleLogout = () => {
-		logoutAccount();
-		goto(resolve('/login'));
-	};
+	const initials = $derived(
+		currentUser ? `${currentUser.name[0] ?? ''}${currentUser.surname[0] ?? ''}` : ''
+	);
 </script>
 
 <svelte:head>
@@ -32,12 +21,12 @@
 	</section>
 
 	<article class="panel profile-card">
-		{#if isReady && currentUser}
+		{#if currentUser}
 			<div class="profile-header">
-				<div class="profile-avatar">{currentUser.avatar}</div>
+				<div class="profile-avatar">{initials}</div>
 				<div>
-					<strong>{currentUser.name}</strong>
-					<span>{currentUser.group}</span>
+					<strong>{currentUser.name} {currentUser.surname}</strong>
+					<span>{currentUser.groupName ?? 'Brak grupy'}</span>
 				</div>
 			</div>
 
@@ -48,20 +37,22 @@
 				</div>
 				<div class="profile-detail">
 					<span>Grupa</span>
-					<span>{currentUser.group}</span>
+					<span>{currentUser.groupName ?? 'Brak grupy'}</span>
 				</div>
 				<div class="profile-detail">
 					<span>Avatar</span>
-					<span>{currentUser.avatar}</span>
+					<span>{initials}</span>
 				</div>
 				<div class="profile-detail">
-					<span>Konto utworzone</span>
-					<span>{new Date(currentUser.createdAt).toLocaleDateString('pl-PL')}</span>
+					<span>Id konta</span>
+					<span>{currentUser.id}</span>
 				</div>
 			</div>
 
 			<div class="profile-actions">
-				<button class="action-button" type="button" onclick={handleLogout}>Wyloguj się</button>
+				<form method="POST">
+					<button class="action-button" type="submit">Wyloguj się</button>
+				</form>
 				<a class="ghost-button" href={resolve('/')}>Wróć do dashboardu</a>
 			</div>
 		{:else}

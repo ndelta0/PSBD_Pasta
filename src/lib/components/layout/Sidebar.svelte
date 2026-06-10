@@ -1,7 +1,6 @@
 <script lang="ts">
-	import type { NavItem } from '$lib/types/sidebar';
 	import SidebarRouteElement from '$lib/components/layout/SidebarRouteElement.svelte';
-	import type { User } from '$lib/types/user';
+	import type { NavItem, User } from '$lib/types';
 
 	type Props = {
 		sidebarCollapsed: boolean;
@@ -14,12 +13,12 @@
 
 	const navItems: NavItem[] = [
 		{ label: 'Dashboard', icon: 'grid', href: '/' },
-		{ label: 'Plan Zajęć', icon: 'calendar', href: '/plan-zajec' },
-		{ label: 'Przedmioty', icon: 'book', href: '/przedmioty' },
-		{ label: 'Oceny', icon: 'award', href: '/oceny' },
-		{ label: 'Wydarzenia', icon: 'briefcase', href: '/wydarzenia' },
-		{ label: 'Frekwencja', icon: 'check', href: '/frekwencja' },
-		{ label: 'Historia', icon: 'history', href: '/historia' }
+		{ label: 'Plan Zajęć', icon: 'calendar', href: '/schedule' },
+		{ label: 'Przedmioty', icon: 'book', href: '/subjects' },
+		{ label: 'Oceny', icon: 'award', href: '/grades' },
+		{ label: 'Wydarzenia', icon: 'briefcase', href: '/events' },
+		{ label: 'Frekwencja', icon: 'check', href: '/attendance' },
+		{ label: 'Historia', icon: 'history', href: '/history' }
 	];
 </script>
 
