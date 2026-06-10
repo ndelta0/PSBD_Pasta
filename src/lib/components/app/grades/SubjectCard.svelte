@@ -8,12 +8,14 @@
 		grades: Grade[];
 	}
 
-	const {
-		name,
-		grades
-	}: Props = $props();
+	const { name, grades }: Props = $props();
 
-	const average = $derived(utils.weightedAverage(grades.map((grade) => grade.value), grades.map((grade) => grade.weight)));
+	const average = $derived(
+		utils.weightedAverage(
+			grades.map((grade) => grade.value),
+			grades.map((grade) => grade.weight)
+		)
+	);
 </script>
 
 <article class="panel grade-subject-card">

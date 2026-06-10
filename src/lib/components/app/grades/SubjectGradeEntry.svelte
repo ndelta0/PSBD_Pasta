@@ -6,12 +6,7 @@
 		weight: number;
 	}
 
-	const {
-		value,
-		name,
-		date,
-		weight
-	}: Props = $props();
+	const { value, name, date, weight }: Props = $props();
 
 	const tone = $derived(value < 3 ? 'bad' : value < 4 ? 'acceptable' : 'good');
 </script>

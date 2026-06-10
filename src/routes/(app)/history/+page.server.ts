@@ -1,10 +1,14 @@
 import type { PageServerLoad } from './$types';
+import type { RowDataPacket } from 'mysql2';
+import type { User } from '$lib/types';
+import db from '$lib/server/db';
 
 export interface SemesterSummary {
 	name: string;
 	gradeAvg: number;
 	attendancePct: number;
 	ects: number;
+	current: boolean;
 	subjects: {
 		name: string;
 		grade: number;
@@ -16,45 +20,97 @@ export interface HistoryData {
 	semesters: SemesterSummary[];
 }
 
-const loadHistory = (): HistoryData => {
-	// TODO: Replace this mock semester history with database-backed historical student records.
+type HistoryRow = RowDataPacket & {
+	semesterId: number;
+	semesterName: string;
+	subjectId: number | null;
+	subjectName: string | null;
+	ects: number | string | null;
+	grade: number | string | null;
+	attendancePct: number | string | null;
+	current: boolean;
+};
+
+type MutableSemesterSummary = SemesterSummary & {
+	gradeValues: number[];
+	attendanceValues: number[];
+};
+
+const average = (values: number[]): number => {
+	if (values.length === 0) return 0;
+	return values.reduce((sum, value) => sum + value, 0) / values.length;
+};
+
+const loadHistory = async (user: User | null): Promise<HistoryData> => {
+	if (!user) throw new Error('User not authenticated');
+
+	const [rows] = await db.execute<HistoryRow[]>(
+		`
+		SELECT
+			semesterId,
+			semesterName,
+			subjectId,
+			subjectName,
+			ects,
+			isCurrent AS current,
+			grade,
+			attendancePct
+		FROM v_semester_subject_summary
+		WHERE userId = ?
+		ORDER BY startsOn DESC, semesterId DESC, subjectName
+		`,
+		[user.id]
+	);
+
+	const semesters = new Map<number, MutableSemesterSummary>();
+
+	for (const row of rows) {
+		if (!semesters.has(row.semesterId)) {
+			semesters.set(row.semesterId, {
+				name: row.semesterName,
+				gradeAvg: 0,
+				attendancePct: 0,
+				ects: 0,
+				subjects: [],
+				gradeValues: [],
+				attendanceValues: [],
+				current: row.current
+			});
+		}
+
+		const semester = semesters.get(row.semesterId)!;
+
+		if (!row.subjectId || !row.subjectName) {
+			continue;
+		}
+
+		const grade = Number(row.grade ?? 0);
+		const attendancePct = Number(row.attendancePct ?? 0);
+
+		semester.ects += Number(row.ects ?? 0);
+		semester.subjects.push({
+			name: row.subjectName,
+			grade,
+			attendancePct
+		});
+
+		if (row.grade !== null) {
+			semester.gradeValues.push(grade);
+		}
+		if (row.attendancePct !== null) {
+			semester.attendanceValues.push(attendancePct);
+		}
+	}
+
 	return {
-		semesters: [
-			{
-				name: 'Semestr zimowy 2024/2025',
-				gradeAvg: 4.35,
-				attendancePct: 94,
-				ects: 30,
-				subjects: [
-					{ name: 'Algorytmy i struktury danych', grade: 4.5, attendancePct: 96 },
-					{ name: 'Fizyka', grade: 4, attendancePct: 90 },
-					{ name: 'Analiza matematyczna', grade: 4.5, attendancePct: 95 }
-				]
-			},
-			{
-				name: 'Semestr letni 2024/2025',
-				gradeAvg: 4.1,
-				attendancePct: 91,
-				ects: 28,
-				subjects: [
-					{ name: 'Podstawy programowania', grade: 5, attendancePct: 100 },
-					{ name: 'Algebra liniowa', grade: 4, attendancePct: 89 },
-					{ name: 'Architektura komputerów', grade: 3.5, attendancePct: 86 }
-				]
-			},
-			{
-				name: 'Semestr zimowy 2023/2024',
-				gradeAvg: 4,
-				attendancePct: 88,
-				ects: 30,
-				subjects: [
-					{ name: 'Wstęp do informatyki', grade: 4.5, attendancePct: 92 },
-					{ name: 'Matematyka dyskretna', grade: 3.5, attendancePct: 84 },
-					{ name: 'Technologie internetowe', grade: 4, attendancePct: 89 }
-				]
-			}
-		]
+		semesters: Array.from(semesters.values()).map(
+			({ gradeValues, attendanceValues, ...semester }) => ({
+				...semester,
+				gradeAvg: average(gradeValues),
+				attendancePct: average(attendanceValues)
+			})
+		)
 	};
 };
 
-export const load: PageServerLoad = async () => loadHistory();
+export const load: PageServerLoad = async ({ locals }) => loadHistory(locals.user);

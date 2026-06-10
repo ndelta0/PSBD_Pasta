@@ -1,8 +1,14 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 
-	let { data } = $props();
-	const currentUser = $derived(data.profile);
+	import type { PageData } from './$types';
+
+	interface Props {
+		data: PageData;
+	}
+
+	let { data }: Props = $props();
+	const currentUser = $derived(data.user);
 
 	const initials = $derived(
 		currentUser ? `${currentUser.name[0] ?? ''}${currentUser.surname[0] ?? ''}` : ''

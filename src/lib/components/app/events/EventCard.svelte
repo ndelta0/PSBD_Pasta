@@ -2,22 +2,14 @@
 	interface Props {
 		title: string;
 		date: string;
-		time: string;
-		subject: string;
-		description: string;
+		time: string | null;
+		subject: string | null;
+		description: string | null;
 		type: string;
 		tone: 'red' | 'amber' | 'green' | 'purple';
 	}
 
-	const {
-		title,
-		date,
-		time,
-		subject,
-		description,
-		type,
-		tone
-	}: Props = $props();
+	const { title, date, time, subject, description, type, tone }: Props = $props();
 </script>
 
 <article class={`panel event-card ${tone}`}>
@@ -28,10 +20,16 @@
 	</header>
 	<p class="event-date">
 		<span aria-hidden="true" class="mini-icon calendar-small"></span>{date}
-		<span aria-hidden="true" class="mini-icon clock"></span>{time}
+		{#if time}
+			<span aria-hidden="true" class="mini-icon clock"></span>{time}
+		{/if}
 	</p>
-	<h3>{subject}</h3>
-	<p class="event-description">
-		<span aria-hidden="true" class="mini-icon file"></span>{description}
-	</p>
+	{#if subject}
+		<h3>{subject}</h3>
+	{/if}
+	{#if description}
+		<p class="event-description">
+			<span aria-hidden="true" class="mini-icon file"></span>{description}
+		</p>
+	{/if}
 </article>

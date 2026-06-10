@@ -28,16 +28,16 @@
 				<div>
 					<h2>{semester.name}</h2>
 				</div>
-				<span>Zakończony</span>
+				<span>{semester.current ? 'Trwa' : 'Zakończony'}</span>
 			</header>
 
 			<div class="history-stats">
 				<div>
-					<strong>{semester.gradeAvg}</strong>
+					<strong>{semester.gradeAvg.toFixed(2)}</strong>
 					<span>Średnia</span>
 				</div>
 				<div>
-					<strong>{semester.attendancePct}%</strong>
+					<strong>{semester.attendancePct.toFixed(1)}%</strong>
 					<span>Frekwencja</span>
 				</div>
 				<div>
@@ -53,7 +53,7 @@
 							<h3>{subject.name}</h3>
 							<p>Frekwencja: {subject.attendancePct}%</p>
 						</div>
-						<strong class={toneForGrade(subject.grade)}>{subject.grade}</strong>
+						<strong class={toneForGrade(subject.grade)}>{subject.grade.toFixed(2)}</strong>
 					</div>
 				{/each}
 			</div>

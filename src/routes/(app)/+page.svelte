@@ -30,10 +30,30 @@
 </section>
 
 <section class="stats-grid" aria-label="Podsumowanie semestru">
-	<DashboardStatCard accent="#9a7cff" icon="book" title="Najbliższe zajęcia" value={overview.nextClass} />
-	<DashboardStatCard accent="#54c69a" icon="trend" title="Średnia ocen" value={overview.gradeAverage} />
-	<DashboardStatCard accent="#f0ad34" icon="check" title="Frekwencja" value={overview.attendancePct} />
-	<DashboardStatCard accent="#ff697a" icon="calendar" title="Wydarzenia" value={overview.eventsPending} />
+	<DashboardStatCard
+		accent="#9a7cff"
+		icon="book"
+		title="Najbliższe zajęcia"
+		value={overview.nextClass}
+	/>
+	<DashboardStatCard
+		accent="#54c69a"
+		icon="trend"
+		title="Średnia ocen"
+		value={overview.gradeAverage}
+	/>
+	<DashboardStatCard
+		accent="#f0ad34"
+		icon="check"
+		title="Frekwencja"
+		value={`${overview.attendancePct}%`}
+	/>
+	<DashboardStatCard
+		accent="#ff697a"
+		icon="calendar"
+		title="Wydarzenia"
+		value={overview.eventsPending}
+	/>
 </section>
 
 <div class="dashboard-grid">

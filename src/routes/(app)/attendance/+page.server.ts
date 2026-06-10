@@ -1,4 +1,7 @@
 import type { PageServerLoad } from './$types';
+import db from '$lib/server/db';
+import type { User } from '$lib/types';
+import type { RowDataPacket } from 'mysql2';
 
 export interface GeneralStats {
 	numPresent: number;
@@ -23,49 +26,78 @@ export interface AttendanceSummary {
 	subjects: SubjectStats[];
 }
 
-const loadAttendance = (): AttendanceSummary => {
-	// TODO: Replace this mock attendance data with database-backed attendance records.
+type AttendanceSummaryRow = RowDataPacket & {
+	userId: number;
+	subjectName: string;
+	attendanceCount: number;
+	numPresent: number;
+	numAbsent: number;
+};
+
+type AttendanceLatestRow = RowDataPacket & {
+	userId: number;
+	classDate: Date;
+	subjectName: string;
+	wasPresent: boolean;
+	classType: string;
+};
+
+const loadAttendance = async (user: User | null): Promise<AttendanceSummary> => {
+	if (!user) throw new Error('User not authenticated');
+
+	let [rSummary] = await db.execute<AttendanceSummaryRow[]>(
+		`
+			SELECT *
+			FROM v_attendance_summary
+			WHERE userId = ?
+		`,
+		[user.id]
+	);
+	rSummary = rSummary.map((r) => ({
+		...r,
+		numPresent: Number(r.numPresent),
+		numAbsent: Number(r.numAbsent)
+	}));
+
+	if (rSummary.length == 0) {
+		return {
+			stats: {
+				numPresent: 0,
+				numAbsent: 0
+			},
+			recent: [],
+			subjects: []
+		};
+	}
+	const totalPresent = rSummary.reduce((acc, row) => acc + row.numPresent, 0);
+	const totalAbsent = rSummary.reduce((acc, row) => acc + row.numAbsent, 0);
+
+	const [rLatest] = await db.execute<AttendanceLatestRow[]>(
+		`
+		SELECT *
+		FROM v_attendance_latest
+		WHERE userId = ?
+		LIMIT 3
+		`,
+		[user.id]
+	);
 
 	return {
 		stats: {
-			numPresent: 42,
-			numAbsent: 3
+			numPresent: totalPresent,
+			numAbsent: totalAbsent
 		},
-		recent: [
-			{
-				name: 'Programowanie obiektowe',
-				details: 'Laboratorium · 2026-05-21',
-				wasPresent: true
-			},
-			{
-				name: 'Matematyka',
-				details: 'Wykład · 2026-05-21',
-				wasPresent: true
-			},
-			{
-				name: 'Algorytmy i struktury danych',
-				details: 'Ćwiczenia · 2026-05-21',
-				wasPresent: false
-			}
-		],
-		subjects: [
-			{
-				name: 'Programowanie obiektowe',
-				numPresent: 15,
-				numAbsent: 0
-			},
-			{
-				name: 'Matematyka',
-				numPresent: 14,
-				numAbsent: 1
-			},
-			{
-				name: 'Fizyka',
-				numPresent: 13,
-				numAbsent: 2
-			}
-		]
+		recent: rLatest.map((row) => ({
+			name: row.subjectName,
+			details: `${row.classType} · ${row.classDate.toISOString().split('T')[0]}`,
+			wasPresent: row.wasPresent
+		})),
+		subjects: rSummary.map((row) => ({
+			name: row.subjectName,
+			numPresent: row.numPresent,
+			numAbsent: row.numAbsent
+		}))
 	};
 };
 
-export const load: PageServerLoad = async () => loadAttendance();
+export const load: PageServerLoad = async ({ locals }) => await loadAttendance(locals.user);

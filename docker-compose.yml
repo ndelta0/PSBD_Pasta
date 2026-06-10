@@ -8,13 +8,15 @@ services:
       MYSQL_DATABASE: pasta_db
       MYSQL_USER: pasta_user
       MYSQL_PASSWORD: pasta_password
+      LANG: C.UTF-8
     ports:
-      - "3306:3306"
+      - '3306:3306'
     volumes:
       - mysql_pasta_data:/var/lib/mysql
       - ./sql/:/docker-entrypoint-initdb.d/:ro
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost', '-uroot', '-proot']
       interval: 10s
       timeout: 5s
       retries: 5

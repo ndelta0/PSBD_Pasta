@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import type { User } from '$lib/types/user';
-import { db } from '$lib/server/db';
+import db from '$lib/server/db';
 import type { ResultSetHeader, RowDataPacket } from 'mysql2';
 import argon2 from 'argon2';
 

@@ -4,12 +4,9 @@
 
 	type Props = {
 		sidebarCollapsed: boolean;
-		user: User
-	}
-	let {
-		sidebarCollapsed = $bindable(false),
-		user
-	}: Props = $props();
+		user: User;
+	};
+	let { sidebarCollapsed = $bindable(false), user }: Props = $props();
 
 	const navItems: NavItem[] = [
 		{ label: 'Dashboard', icon: 'grid', href: '/' },
@@ -21,7 +18,6 @@
 		{ label: 'Historia', icon: 'history', href: '/history' }
 	];
 </script>
-
 
 <aside aria-label="Nawigacja główna" class="sidebar" id="main-sidebar">
 	<button

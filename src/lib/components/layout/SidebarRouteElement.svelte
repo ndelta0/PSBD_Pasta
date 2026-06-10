@@ -7,7 +7,7 @@
 	let isActive = $derived(page.url.pathname === href);
 </script>
 
-<a aria-current={isActive ? 'page' : undefined} class:active={isActive} href={href}>
+<a aria-current={isActive ? 'page' : undefined} class:active={isActive} {href}>
 	<span aria-hidden="true" class="nav-icon" data-icon={icon}></span>
 	<span>{label}</span>
 </a>

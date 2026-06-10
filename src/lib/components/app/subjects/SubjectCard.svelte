@@ -9,7 +9,7 @@
 		coordinator: string;
 		coordinatorEmail: string;
 		teachers: string[];
-		types: ({ label: string, tone?: string } | string)[];
+		types: ({ label: string; tone?: string } | string)[];
 		presenceMandatory: boolean;
 	}
 
@@ -32,7 +32,9 @@
 			<h2>{name}</h2>
 			<p>{code}</p>
 		</div>
-		<span class:elective={presenceMandatory}>{presenceMandatory ? 'Obowiązkowy' : 'Obieralny'}</span>
+		<span class:elective={presenceMandatory}
+			>{presenceMandatory ? 'Obowiązkowy' : 'Nieobowiązkowy'}</span
+		>
 	</header>
 
 	<p class="subject-description">{description}</p>
@@ -44,13 +46,15 @@
 		</li>
 		<li>
 			<span aria-hidden="true" class="mini-icon mail"></span><span class="font-mono underline">
-			<a href="mailto:{coordinatorEmail}">{coordinatorEmail}</a></span>
+				<a href="mailto:{coordinatorEmail}">{coordinatorEmail}</a></span
+			>
 		</li>
 	</ul>
 
 	<div class="tag-block">
 		<p>Prowadzący:</p>
 		<div>
+			<span class="pill neutral">{coordinator}</span>
 			{#each teachers as teacher (teacher)}
 				<span class="pill neutral">{teacher}</span>
 			{/each}
@@ -64,7 +68,9 @@
 				{#if typeof type === 'string'}
 					<span class={`pill ${utils.getToneForClassType(type)}`}>{type}</span>
 				{:else}
-					<span class={`pill ${utils.getToneForClassType(type.label, type.tone)}`}>{type.label}</span>
+					<span class={`pill ${utils.getToneForClassType(type.label, type.tone)}`}
+						>{type.label}</span
+					>
 				{/if}
 			{/each}
 		</div>

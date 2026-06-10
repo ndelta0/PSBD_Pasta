@@ -1,4 +1,7 @@
 import type { PageServerLoad } from './$types';
+import type { RowDataPacket } from 'mysql2';
+import type { User } from '$lib/types';
+import db from '$lib/server/db';
 
 export interface Subject {
 	name: string;
@@ -16,44 +19,52 @@ export interface SubjectData {
 	subjects: Subject[];
 }
 
-const loadSubjects = (): SubjectData => {
-	// TODO: Replace this mock subject catalog with database-backed subject enrollment data.
+type SubjectDetailsRow = RowDataPacket & {
+	subjectId: number;
+	userId: number;
+	name: string;
+	code: string | null;
+	description: string | null;
+	ects: number | null;
+	coordinatorName: string | null;
+	coordinatorEmail: string | null;
+	presenceMandatory: boolean;
+	semesterName: string;
+	teachers: string | null;
+	classTypes: string | null;
+};
+
+const splitList = (value: string | null): string[] => {
+	if (!value) return [];
+	return value.split(';').filter(Boolean);
+};
+
+const loadSubjects = async (user: User | null): Promise<SubjectData> => {
+	if (!user) throw new Error('User not authenticated');
+
+	const [rows] = await db.execute<SubjectDetailsRow[]>(
+		`
+		SELECT *
+		FROM v_subject_details
+		WHERE userId = ?
+		ORDER BY name
+		`,
+		[user.id]
+	);
+
 	return {
-		subjects: [
-			{
-				name: 'Programowanie obiektowe',
-				code: 'PROG',
-				description: 'Podstawy programowania obiektowego w c++',
-				ects: 6,
-				coordinator: 'dr hab. Jan Kowalski',
-				coordinatorEmail: 'j.kowalski@uniwersytet.edu.pl',
-				teachers: ['dr hab. Jan Kowalski', 'mgr Anna Nowak'],
-				types: ['Wykład', 'Laboratorium', 'Projekt'],
-				presenceMandatory: true
-			},
-			{
-				name: 'Matematyka',
-				code: 'MAT',
-				ects: 15,
-				coordinator: 'prof. dr hab. Katarzyna Zielińska',
-				coordinatorEmail: 'k.zielinska@uniwersytet.edu.pl',
-				teachers: ['prof. dr hab. Katarzyna Zielińska', 'mgr Anna Nowak'],
-				types: ['Wykład', 'Ćwiczenia'],
-				presenceMandatory: true
-			},
-			{
-				name: 'Systemy operacyjne',
-				code: 'SOP',
-				description: 'Architektura systemów operacyjnych, zarządzanie procesami i pamięcią',
-				ects: 2,
-				coordinator: 'mgr Michał Dąbrowski',
-				coordinatorEmail: 'm.dabrowski@uniwersytet.edu.pl',
-				teachers: ['mgr Michał Dąbrowski'],
-				types: ['Wykład', 'Laboratorium', 'Seminarium'],
-				presenceMandatory: false
-			}
-		]
+		subjects: rows.map((row) => ({
+			name: row.name,
+			code: row.code ?? '',
+			description: row.description ?? undefined,
+			ects: Number(row.ects ?? 0),
+			coordinator: row.coordinatorName ?? '',
+			coordinatorEmail: row.coordinatorEmail ?? '',
+			teachers: splitList(row.teachers),
+			types: splitList(row.classTypes),
+			presenceMandatory: Boolean(row.presenceMandatory)
+		}))
 	};
 };
 
-export const load: PageServerLoad = async () => loadSubjects();
+export const load: PageServerLoad = async ({ locals }) => loadSubjects(locals.user);

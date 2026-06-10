@@ -19,9 +19,7 @@
 	let selectedDay = $state<DayOfWeek>(today());
 	const schedule = $derived(data.schedule);
 
-	const visibleDays = $derived(
-		DayOfWeekValues.filter((day) => schedule[day]?.length)
-	);
+	const visibleDays = $derived(DayOfWeekValues.filter((day) => schedule[day]?.length));
 
 	const classes = $derived(schedule[selectedDay] ?? []);
 </script>
@@ -32,7 +30,6 @@
 
 <section aria-labelledby="schedule-title" class="page-heading narrow">
 	<h1 id="schedule-title">Plan Zajęć</h1>
-	<p>Semestr letni 2025/2026</p>
 </section>
 
 <section aria-label="Plan tygodnia" class="panel schedule-panel">

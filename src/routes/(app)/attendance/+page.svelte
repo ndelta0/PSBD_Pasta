@@ -12,23 +12,20 @@
 	const recent = $derived(data.recent);
 	const subjects = $derived(data.subjects);
 
-	const attendancePct = $derived(stats.numPresent / (stats.numPresent + stats.numAbsent) * 100);
+	const attendancePct = $derived((stats.numPresent / (stats.numPresent + stats.numAbsent)) * 100);
 
-	const toneForPresence = (present: boolean) => present ? 'green' : 'red';
-	const statusForPresence = (present: boolean) => present ? 'Obecny' : 'Nieobecny';
+	const toneForPresence = (present: boolean) => (present ? 'green' : 'red');
+	const statusForPresence = (present: boolean) => (present ? 'Obecny' : 'Nieobecny');
 
 	const colorForSubject = (numAbsent: number): string => {
-		if (numAbsent == 0)
-			return '#5fc4a0';
-		if (numAbsent == 1)
-			return '#ffbd50';
+		if (numAbsent == 0) return '#5fc4a0';
+		if (numAbsent == 1) return '#ffbd50';
 		return '#ff6b86';
 	};
 
 	const pctPresentForSubject = (numPresent: number, numAbsent: number): number => {
 		const total = numPresent + numAbsent;
-		if (total == 0)
-			return 0;
+		if (total == 0) return 0;
 		return (numPresent / total) * 100;
 	};
 
@@ -48,10 +45,20 @@
 </section>
 
 <section class="attendance-stats" aria-label="Podsumowanie frekwencji">
-	<SummaryCard icon="trend" label="Ogólna obeność" tone="green" value={attendancePct.toFixed(2)} />
+	<SummaryCard
+		icon="trend"
+		label="Ogólna obeność"
+		tone="green"
+		value={`${attendancePct.toFixed(1)}%`}
+	/>
 	<SummaryCard icon="check" label="Obecności" tone="green" value={stats.numPresent} />
 	<SummaryCard icon="x-circle" label="Nieobecności" tone="red" value={stats.numAbsent} />
-	<SummaryCard icon="clock-large" label="Łączna liczba zajęć" tone="gray" value={stats.numPresent + stats.numAbsent} />
+	<SummaryCard
+		icon="clock-large"
+		label="Łączna liczba zajęć"
+		tone="gray"
+		value={stats.numPresent + stats.numAbsent}
+	/>
 </section>
 
 <div class="dashboard-grid">
@@ -80,7 +87,9 @@
 						<h3>{item.name}</h3>
 						<p>{item.details}</p>
 					</div>
-					<strong class={toneForPresence(item.wasPresent)}>{statusForPresence(item.wasPresent)}</strong>
+					<strong class={toneForPresence(item.wasPresent)}
+						>{statusForPresence(item.wasPresent)}</strong
+					>
 				</article>
 			{/each}
 		</div>

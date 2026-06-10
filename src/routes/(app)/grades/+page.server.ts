@@ -1,4 +1,7 @@
 import type { PageServerLoad } from './$types';
+import type { RowDataPacket } from 'mysql2';
+import type { User } from '$lib/types';
+import db from '$lib/server/db';
 
 export interface Grade {
 	id: number;
@@ -12,27 +15,51 @@ export interface SubjectGrades {
 	subjects: Record<string, Grade[]>;
 }
 
-const loadGrades = (): SubjectGrades => {
-	// TODO: Replace this mock gradebook with database-backed grades and grade labels.
+type GradeDetailRow = RowDataPacket & {
+	gradeId: number;
+	userId: number;
+	subjectId: number;
+	subjectName: string;
+	value: number;
+	weight: number;
+	gradedOn: Date;
+	name: string;
+};
+
+const loadGrades = async (user: User | null): Promise<SubjectGrades> => {
+	if (!user) throw new Error('User not authenticated');
+
+	const [rows] = await db.execute(
+		`
+		SELECT *
+		FROM v_grade_details
+		WHERE userId = ?
+		ORDER BY gradedOn DESC`,
+		[user.id]
+	);
+
+	const rowToGrade = (row: GradeDetailRow): Grade => ({
+		id: row.gradeId,
+		value: Number(row.value),
+		name: row.name,
+		date: row.gradedOn.toISOString().split('T')[0],
+		weight: Number(row.weight)
+	});
+
+	const groupGradesBySubject = (rows: GradeDetailRow[]): Record<string, Grade[]> => {
+		const map = new Map<string, Grade[]>();
+		for (const row of rows) {
+			const subject = row.subjectName;
+			const grade = rowToGrade(row);
+			if (!map.has(subject)) map.set(subject, []);
+			map.get(subject)!.push(grade);
+		}
+		return Object.fromEntries(map.entries());
+	};
 
 	return {
-		subjects: {
-			Matematyka: [
-				{ id: 1, value: 5, name: 'Egzamin', date: '2026-05-20', weight: 3 },
-				{ id: 2, value: 4.5, name: 'Wejściówka', date: '2026-05-10', weight: 2 },
-				{ id: 3, value: 5, name: 'Aktywność', date: '2026-05-15', weight: 1 }
-			],
-			'Programowanie obiektowe': [
-				{ id: 4, value: 4, name: 'Egzamin', date: '2026-05-18', weight: 3 },
-				{ id: 5, value: 2, name: 'Kolokwium', date: '2026-05-20', weight: 2 },
-				{ id: 6, value: 3.5, name: 'Kartkówka', date: '2026-04-05', weight: 1 }
-			],
-			'Bazy danych': [
-				{ id: 7, value: 5, name: 'Projekt', date: '2026-05-20', weight: 3 },
-				{ id: 8, value: 5, name: 'Kolokwium', date: '2026-05-10', weight: 2 }
-			]
-		}
+		subjects: groupGradesBySubject(rows as GradeDetailRow[])
 	};
 };
 
-export const load: PageServerLoad = async () => loadGrades();
+export const load: PageServerLoad = async ({ locals }) => loadGrades(locals.user);

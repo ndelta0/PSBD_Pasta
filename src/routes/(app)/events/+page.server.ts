@@ -1,67 +1,61 @@
 import type { PageServerLoad } from './$types';
+import type { User } from '$lib/types';
+import type { RowDataPacket } from 'mysql2';
+import db from '$lib/server/db';
+
+export type EventTone = 'red' | 'amber' | 'green' | 'purple';
 
 export interface Event {
 	id: number;
 	title: string;
 	date: string;
-	time: string;
-	subject: string;
-	description: string;
+	time: string | null;
+	subject: string | null;
+	description: string | null;
 	type: string;
-	tone: 'red' | 'amber' | 'green' | 'purple';
+	tone: EventTone;
 }
 
 export interface EventsData {
 	events: Event[];
 }
 
-const loadEvents = (): EventsData => {
-	// TODO: Replace this mock event list with database-backed events for the logged-in user.
+type EventsUpcomingRow = RowDataPacket & {
+	userId: number;
+	eventId: number;
+	summary: string;
+	eventDate: Date;
+	eventTime: string | null; // transmitted as "HH:mm:ss"
+	description: string | null;
+	type: string;
+	tone: EventTone;
+	subjectName: string | null;
+};
+
+const loadEvents = async (user: User | null): Promise<EventsData> => {
+	if (!user) throw new Error('User not authenticated');
+
+	const [rows] = await db.execute<EventsUpcomingRow[]>(
+		`SELECT *
+		 FROM v_events_upcoming
+		 WHERE userId = ?`,
+		[user.id]
+	);
+
+	console.log(rows);
 
 	return {
-		events: [
-			{
-				id: 1,
-				title: 'Egzamin z programowania',
-				date: '2026-05-27',
-				time: '10:15',
-				subject: 'Programowanie obiektowe',
-				description: 'Egzamin końcowy obejmujący materiał z całego semestru',
-				type: 'Egzamin',
-				tone: 'red'
-			},
-			{
-				id: 2,
-				title: 'Oddanie projektu',
-				date: '2026-05-28',
-				time: '23:59',
-				subject: 'Bazy danych',
-				description: 'Projekt końcowy - system zarządzania bazą danych',
-				type: 'Projekt',
-				tone: 'amber'
-			},
-			{
-				id: 3,
-				title: 'Kolokwium - Matematyka',
-				date: '2026-05-29',
-				time: '12:15',
-				subject: 'Matematyka',
-				description: 'Kolokwium z kombinatoryki',
-				type: 'Kolokwium',
-				tone: 'green'
-			},
-			{
-				id: 4,
-				title: 'Prezentacja projektu',
-				date: '2026-05-29',
-				time: '14:15',
-				subject: 'Algorytmy i struktury danych',
-				description: 'Prezentowanie implementacji algorytmów sortowania',
-				type: 'Prezentacja',
-				tone: 'purple'
-			}
-		]
+		events: rows.map((row) => ({
+			id: row.eventId,
+			title: row.summary,
+			date: row.eventDate.toISOString().split('T')[0],
+			time: row.eventTime?.slice(0, 5) ?? null,
+			subject: row.subjectName ?? '',
+			description: row.description ?? null,
+			type: row.type,
+			tone: row.tone
+		}))
 	};
 };
 
-export const load: PageServerLoad = async () => loadEvents();
+export const load: PageServerLoad = async ({ locals }) => await loadEvents(locals.user);

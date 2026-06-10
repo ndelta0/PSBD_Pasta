@@ -1,5 +1,7 @@
 import type { PageServerLoad } from './$types';
-import { type DayOfWeek } from '$lib/types';
+import { type DayOfWeek, DayOfWeekValues } from '$lib/types';
+import type { RowDataPacket } from 'mysql2';
+import db from '$lib/server/db';
 
 export interface ClassItem {
 	name: string;
@@ -10,118 +12,63 @@ export interface ClassItem {
 	accent?: string;
 }
 
-export type ScheduleData = {
+export interface ScheduleData {
 	schedule: Record<DayOfWeek, ClassItem[]>;
+}
+
+type ScheduleDisplayRow = RowDataPacket & {
+	scheduleEntryId: number;
+	userId: number;
+	subjectId: number;
+	name: string;
+	dayOfWeek: DayOfWeek;
+	startsAt: string;
+	endsAt: string;
+	location: string;
+	teacherName: string;
+	classType: string;
 };
 
-const loadSchedule = (): ScheduleData => {
-	// TODO: Replace this mock weekly schedule with a database query filtered by selectedDay.
+export const load: PageServerLoad = async ({ locals }): Promise<ScheduleData> => {
+	if (!locals.user) throw new Error('User not authenticated');
+
+	const [rows] = await db.execute<ScheduleDisplayRow[]>(
+		`
+		SELECT *
+		FROM v_schedule_display
+		WHERE userId = ?`,
+		[locals.user.id]
+	);
+
+	const cleanTime = (time: string): string => time.slice(0, 5);
+
+	const rowToClassItem = (row: ScheduleDisplayRow): ClassItem => ({
+		name: row.name,
+		time: `${cleanTime(row.startsAt)} - ${cleanTime(row.endsAt)}`,
+		room: row.location,
+		teacher: row.teacherName,
+		type: row.classType
+	});
+
+	const groupClassItemsByDay = (rows: ScheduleDisplayRow[]): Record<DayOfWeek, ClassItem[]> => {
+		const map = new Map<DayOfWeek, ClassItem[]>();
+
+		for (const day of DayOfWeekValues) {
+			map.set(day, []);
+		}
+
+		for (const row of rows) {
+			const day = row.dayOfWeek;
+			const classItem = rowToClassItem(row);
+			if (!map.has(day)) map.set(day, []);
+			map.get(day)!.push(classItem);
+		}
+
+		// @ts-expect-error Map has all values
+		return Object.fromEntries(map.entries());
+	};
 
 	return {
-		schedule: {
-			Monday: [
-				{
-					name: 'Programowanie obiektowe',
-					time: '8:15 - 10:00',
-					room: 's. 308',
-					teacher: 'dr hab. Jan Kowalski',
-					type: 'Wykład'
-				},
-				{
-					name: 'Matematyka',
-					time: '10:15 - 12:00',
-					room: 's. 011',
-					teacher: 'mgr Anna Nowak',
-					type: 'Ćwiczenia'
-				},
-				{
-					name: 'Bazy danych',
-					time: '14:15 - 16:00',
-					room: 's. 720',
-					teacher: 'dr Piotr Wiśniewski',
-					type: 'Laboratorium'
-				}
-			],
-
-			Tuesday: [
-				{
-					name: 'Systemy operacyjne',
-					time: '8:15 - 10:00',
-					room: 's. 402',
-					teacher: 'mgr Michał Dąbrowski',
-					type: 'Wykład'
-				},
-				{
-					name: 'Fizyka',
-					time: '12:15 - 14:00',
-					room: 's. 118',
-					teacher: 'dr Ewa Mazur',
-					type: 'Ćwiczenia'
-				}
-			],
-
-			Wednesday: [
-				{
-					name: 'Bazy danych',
-					time: '9:15 - 11:00',
-					room: 's. 720',
-					teacher: 'dr Piotr Wiśniewski',
-					type: 'Laboratorium'
-				},
-				{
-					name: 'Matematyka',
-					time: '13:15 - 15:00',
-					room: 's. 011',
-					teacher: 'prof. dr hab. Katarzyna Zielińska',
-					type: 'Wykład'
-				}
-			],
-
-			Thursday: [
-				{
-					name: 'Programowanie obiektowe',
-					time: '10:15 - 12:00',
-					room: 's. 316',
-					teacher: 'mgr Anna Nowak',
-					type: 'Laboratorium'
-				},
-				{
-					name: 'Algorytmy i struktury danych',
-					time: '14:15 - 16:00',
-					room: 's. 205',
-					teacher: 'dr Tomasz Wójcik',
-					type: 'Ćwiczenia'
-				}
-			],
-
-			Friday: [
-				{
-					name: 'Systemy operacyjne',
-					time: '8:15 - 10:00',
-					room: 's. 410',
-					teacher: 'mgr Michał Dąbrowski',
-					type: 'Laboratorium'
-				},
-				{
-					name: 'Fizyka',
-					time: '10:15 - 12:00',
-					room: 's. 118',
-					teacher: 'dr Ewa Mazur',
-					type: 'Wykład'
-				},
-				{
-					name: 'Konsultacje projektowe',
-					time: '13:15 - 14:00',
-					room: 's. 720',
-					teacher: 'dr Piotr Wiśniewski',
-					type: 'Projekt'
-				}
-			],
-
-			Saturday: [],
-			Sunday: []
-		}
+		schedule: groupClassItemsByDay(rows)
 	};
 };
-
-export const load: PageServerLoad = async () => loadSchedule();

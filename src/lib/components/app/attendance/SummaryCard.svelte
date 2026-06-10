@@ -6,12 +6,7 @@
 		tone: string;
 	}
 
-	const {
-		label,
-		value,
-		icon,
-		tone
-	}: Props = $props();
+	const { label, value, icon, tone }: Props = $props();
 </script>
 
 <article class="panel attendance-stat">

@@ -1,4 +1,7 @@
 import type { PageServerLoad } from './$types';
+import type { RowDataPacket } from 'mysql2';
+import type { User } from '$lib/types';
+import db from '$lib/server/db';
 
 export interface DashboardStats {
 	overview: {
@@ -30,55 +33,157 @@ export interface DashboardStats {
 	}[];
 }
 
-const loadDashboard = (): DashboardStats => {
-	// TODO: Replace this mock dashboard snapshot with data loaded from the database.
+type ScheduleDisplayRow = RowDataPacket & {
+	name: string;
+	startsAt: string;
+	endsAt: string;
+	location: string | null;
+	teacherName: string | null;
+	classType: string | null;
+};
+
+type GradeDetailRow = RowDataPacket & {
+	subjectName: string;
+	value: number | string;
+	weight: number | string;
+	gradedOn: Date;
+};
+
+type GradeAverageRow = RowDataPacket & {
+	average: number | string | null;
+};
+
+type AttendanceSummaryRow = RowDataPacket & {
+	numPresent: number | string | null;
+	numAbsent: number | string | null;
+};
+
+type EventsUpcomingRow = RowDataPacket & {
+	summary: string;
+	eventDate: Date;
+	eventTime: string | null;
+	type: string;
+};
+
+type EventsCountRow = RowDataPacket & {
+	eventsPending: number;
+};
+
+const cleanTime = (time: string): string => time.slice(0, 5);
+const formatDate = (date: Date): string => date.toISOString().split('T')[0];
+
+const toneForGrade = (value: number): 'good' | 'acceptable' | 'bad' => {
+	if (value < 3) return 'bad';
+	if (value < 4) return 'acceptable';
+	return 'good';
+};
+
+const loadDashboard = async (user: User | null): Promise<DashboardStats> => {
+	if (!user) throw new Error('User not authenticated');
+
+	const [classesRows] = await db.execute<ScheduleDisplayRow[]>(
+		`
+		SELECT *
+		FROM v_schedule_display
+		WHERE userId = ?
+			AND dayOfWeek = DAYNAME(CURDATE())
+			AND endsAt >= CURTIME()
+		ORDER BY startsAt
+		LIMIT 3
+		`,
+		[user.id]
+	);
+
+	const [latestGradesRows] = await db.execute<GradeDetailRow[]>(
+		`
+		SELECT *
+		FROM v_grade_details
+		WHERE userId = ?
+		ORDER BY gradedOn DESC, gradeId DESC
+		LIMIT 3
+		`,
+		[user.id]
+	);
+
+	const [gradeAverageRows] = await db.execute<GradeAverageRow[]>(
+		`
+		SELECT SUM(value * weight) / NULLIF(SUM(weight), 0) AS average
+		FROM grades
+		WHERE userId = ?
+		`,
+		[user.id]
+	);
+
+	const [attendanceRows] = await db.execute<AttendanceSummaryRow[]>(
+		`
+		SELECT numPresent, numAbsent
+		FROM v_attendance_summary
+		WHERE userId = ?
+		`,
+		[user.id]
+	);
+
+	const [eventsRows] = await db.execute<EventsUpcomingRow[]>(
+		`
+		SELECT *
+		FROM v_events_upcoming
+		WHERE userId = ?
+			AND eventDate >= CURDATE()
+		ORDER BY eventDate, eventTime
+		LIMIT 3
+		`,
+		[user.id]
+	);
+
+	const [eventsCountRows] = await db.execute<EventsCountRow[]>(
+		`
+		SELECT COUNT(*) AS eventsPending
+		FROM events
+		WHERE userId = ?
+			AND eventDate >= CURDATE()
+		`,
+		[user.id]
+	);
+
+	const totalPresent = attendanceRows.reduce((sum, row) => sum + Number(row.numPresent ?? 0), 0);
+	const totalAbsent = attendanceRows.reduce((sum, row) => sum + Number(row.numAbsent ?? 0), 0);
+	const totalAttendance = totalPresent + totalAbsent;
+
+	const gradeAverage = Number(gradeAverageRows[0]?.average ?? 0);
+	const attendancePct = totalAttendance > 0 ? (totalPresent / totalAttendance) * 100 : 0;
+
 	return {
 		overview: {
-			nextClass: 'Bazy danych',
-			gradeAverage: 4.2,
-			attendancePct: 92,
-			eventsPending: 5
+			nextClass: classesRows[0]?.name ?? 'Brak zajęć',
+			gradeAverage: Number(gradeAverage.toFixed(2)),
+			attendancePct: Number(attendancePct.toFixed(1)),
+			eventsPending: eventsCountRows[0]?.eventsPending ?? 0
 		},
-		classes: [
-			{
-				name: 'Programowanie obiektowe',
-				time: '8:15 - 10:00',
-				room: 's. 308',
-				teacher: 'dr hab. Jan Kowalski',
-				type: 'Wykład'
-			},
-			{
-				name: 'Matematyka',
-				time: '10:15 - 12:00',
-				room: 's. 011',
-				teacher: 'mgr Anna Nowak',
-				type: 'Ćwiczenia'
-			},
-			{
-				name: 'Bazy danych',
-				time: '14:15 - 16:00',
-				room: 's. 720',
-				teacher: 'dr Piotr Wiśniewski',
-				type: 'Laboratorium'
-			}
-		],
-		grades: [
-			{
-				subject: 'Programowanie obiektowe',
-				date: '2026-05-20',
-				weight: '3',
-				value: '5',
-				tone: 'good'
-			},
-			{ subject: 'Fizyka', date: '2026-05-18', weight: '2', value: '2', tone: 'bad' },
-			{ subject: 'Matematyka', date: '2026-05-15', weight: '1', value: '3', tone: 'acceptable' }
-		],
-		events: [
-			{ title: 'Egzamin z Fizyki', date: '2026-05-25', time: '10:15', type: 'Egzamin' },
-			{ title: 'Kolokwium z Matematyki', date: '2026-05-28', time: '14:15', type: 'Kolokwium' },
-			{ title: 'Projekt z Programowania', date: '2026-05-27', time: '23:59', type: 'Projekt' }
-		]
+		classes: classesRows.map((row) => ({
+			name: row.name,
+			time: `${cleanTime(row.startsAt)} - ${cleanTime(row.endsAt)}`,
+			room: row.location ?? '',
+			teacher: row.teacherName ?? '',
+			type: row.classType ?? ''
+		})),
+		grades: latestGradesRows.map((row) => {
+			const value = Number(row.value);
+			return {
+				subject: row.subjectName,
+				date: formatDate(row.gradedOn),
+				weight: Number(row.weight).toString(),
+				value: value.toString(),
+				tone: toneForGrade(value)
+			};
+		}),
+		events: eventsRows.map((row) => ({
+			title: row.summary,
+			date: formatDate(row.eventDate),
+			time: row.eventTime?.slice(0, 5) ?? '',
+			type: row.type
+		}))
 	};
 };
 
-export const load: PageServerLoad = async () => loadDashboard();
+export const load: PageServerLoad = async ({ locals }): Promise<DashboardStats> =>
+	loadDashboard(locals.user);

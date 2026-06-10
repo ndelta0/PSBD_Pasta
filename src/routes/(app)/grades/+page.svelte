@@ -137,7 +137,10 @@
 			return 0;
 		}
 
-		return utils.weightedAverage(grades.map((grade) => grade.value), grades.map((grade) => grade.weight));
+		return utils.weightedAverage(
+			grades.map((grade) => grade.value),
+			grades.map((grade) => grade.weight)
+		);
 	};
 
 	const averageSubjects = (subs: typeof subjects) => {

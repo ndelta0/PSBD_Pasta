@@ -7,7 +7,7 @@ import {
 	DATABASE_USER
 } from '$env/static/private';
 
-export const db = mysql.createPool({
+export default mysql.createPool({
 	host: DATABASE_HOST,
 	port: Number(DATABASE_PORT),
 	user: DATABASE_USER,
