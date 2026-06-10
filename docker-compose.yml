@@ -1,9 +1,10 @@
 services:
-  mysql:
+  db:
     image: mysql:8.4
     container_name: mysql-pasta
     restart: on-failure
     environment:
+      TZ: Europe/Warsaw
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: pasta_db
       MYSQL_USER: pasta_user
@@ -20,6 +21,28 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pasta-app
+    restart: on-failure
+    ports:
+      - '3000:3000'
+    environment:
+      TZ: Europe/Warsaw
+      DATABASE_HOST: db
+      DATABASE_PORT: 3306
+      DATABASE_USER: pasta_user
+      DATABASE_PASSWORD: pasta_password
+      DATABASE_NAME: pasta_db
+      PORT: 3000
+      HOST: 0.0.0.0
+      ORIGIN: http://localhost:3000
+    depends_on:
+      db:
+        condition: service_healthy
 
 volumes:
   mysql_pasta_data:
