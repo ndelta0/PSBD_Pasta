@@ -22,7 +22,7 @@ type GradeDetailRow = RowDataPacket & {
 	subjectName: string;
 	value: number;
 	weight: number;
-	gradedOn: Date;
+	gradedOn: string;
 	name: string;
 };
 
@@ -42,7 +42,7 @@ const loadGrades = async (user: User | null): Promise<SubjectGrades> => {
 		id: row.gradeId,
 		value: Number(row.value),
 		name: row.name,
-		date: row.gradedOn.toISOString().split('T')[0],
+		date: row.gradedOn.slice(0, 10),
 		weight: Number(row.weight)
 	});
 

@@ -24,7 +24,7 @@ type EventsUpcomingRow = RowDataPacket & {
 	userId: number;
 	eventId: number;
 	summary: string;
-	eventDate: Date;
+	eventDate: string;
 	eventTime: string | null; // transmitted as "HH:mm:ss"
 	description: string | null;
 	type: string;
@@ -42,13 +42,11 @@ const loadEvents = async (user: User | null): Promise<EventsData> => {
 		[user.id]
 	);
 
-	console.log(rows);
-
 	return {
 		events: rows.map((row) => ({
 			id: row.eventId,
 			title: row.summary,
-			date: row.eventDate.toISOString().split('T')[0],
+			date: row.eventDate.slice(0, 10),
 			time: row.eventTime?.slice(0, 5) ?? null,
 			subject: row.subjectName ?? '',
 			description: row.description ?? null,

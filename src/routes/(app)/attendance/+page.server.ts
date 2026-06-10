@@ -36,7 +36,7 @@ type AttendanceSummaryRow = RowDataPacket & {
 
 type AttendanceLatestRow = RowDataPacket & {
 	userId: number;
-	classDate: Date;
+	classDate: string;
 	subjectName: string;
 	wasPresent: boolean;
 	classType: string;
@@ -89,7 +89,7 @@ const loadAttendance = async (user: User | null): Promise<AttendanceSummary> => 
 		},
 		recent: rLatest.map((row) => ({
 			name: row.subjectName,
-			details: `${row.classType} · ${row.classDate.toISOString().split('T')[0]}`,
+			details: `${row.classType} · ${row.classDate.slice(0, 10)}`,
 			wasPresent: row.wasPresent
 		})),
 		subjects: rSummary.map((row) => ({

@@ -46,7 +46,7 @@ type GradeDetailRow = RowDataPacket & {
 	subjectName: string;
 	value: number | string;
 	weight: number | string;
-	gradedOn: Date;
+	gradedOn: string;
 };
 
 type GradeAverageRow = RowDataPacket & {
@@ -60,7 +60,7 @@ type AttendanceSummaryRow = RowDataPacket & {
 
 type EventsUpcomingRow = RowDataPacket & {
 	summary: string;
-	eventDate: Date;
+	eventDate: string;
 	eventTime: string | null;
 	type: string;
 };
@@ -70,7 +70,7 @@ type EventsCountRow = RowDataPacket & {
 };
 
 const cleanTime = (time: string): string => time.slice(0, 5);
-const formatDate = (date: Date): string => date.toISOString().split('T')[0];
+const formatDate = (date: string): string => date.slice(0, 10);
 
 const toneForGrade = (value: number): 'good' | 'acceptable' | 'bad' => {
 	if (value < 3) return 'bad';
