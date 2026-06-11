@@ -14,7 +14,7 @@
 		{ label: 'Przedmioty', icon: 'book', href: '/subjects' },
 		{ label: 'Oceny', icon: 'award', href: '/grades' },
 		{ label: 'Wydarzenia', icon: 'briefcase', href: '/events' },
-		{ label: 'Frekwencja', icon: 'check', href: '/attendance' },
+		{ label: 'Frekwencja', icon: 'check2', href: '/attendance' },
 		{ label: 'Historia', icon: 'history', href: '/history' }
 	];
 </script>
