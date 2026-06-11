@@ -1,7 +1,7 @@
 # PASTA — Planer Studenta
 
-Aplikacja webowa dla studentów: plan zajęć, przedmioty, oceny, wydarzenia, frekwencja i historia semestrów. Frontend w *
-*SvelteKit**, dane w **MySQL**.
+Aplikacja webowa dla studentów: plan zajęć, przedmioty, oceny, wydarzenia, frekwencja i historia semestrów. Frontend w
+**SvelteKit**, dane w **MySQL**.
 
 ## Wymagania
 
