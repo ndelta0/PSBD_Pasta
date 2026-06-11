@@ -19,6 +19,7 @@ export interface DashboardStats {
 		accent?: string;
 	}[];
 	grades: {
+		id: number;
 		subject: string;
 		date: string;
 		weight: string;
@@ -43,6 +44,7 @@ type ScheduleDisplayRow = RowDataPacket & {
 };
 
 type GradeDetailRow = RowDataPacket & {
+	gradeId: number;
 	subjectName: string;
 	value: number | string;
 	weight: number | string;
@@ -169,6 +171,7 @@ const loadDashboard = async (user: User | null): Promise<DashboardStats> => {
 		grades: latestGradesRows.map((row) => {
 			const value = Number(row.value);
 			return {
+				id: row.gradeId,
 				subject: row.subjectName,
 				date: formatDate(row.gradedOn),
 				weight: Number(row.weight).toString(),

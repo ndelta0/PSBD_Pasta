@@ -1,18 +1,87 @@
 <script lang="ts">
-	import type { PageData } from './$types';
+	import { enhance } from '$app/forms';
+	import type { ActionData, PageData } from './$types';
 	import SummaryCard from '$lib/components/app/attendance/SummaryCard.svelte';
 
 	interface Props {
 		data: PageData;
+		form?: ActionData;
 	}
 
-	let { data }: Props = $props();
+	let { data, form }: Props = $props();
 
 	const stats = $derived(data.stats);
 	const recent = $derived(data.recent);
 	const subjects = $derived(data.subjects);
+	const totalAttendance = $derived(stats.numPresent + stats.numAbsent);
+	const attendancePct = $derived(
+		totalAttendance > 0 ? (stats.numPresent / totalAttendance) * 100 : 0
+	);
 
-	const attendancePct = $derived((stats.numPresent / (stats.numPresent + stats.numAbsent)) * 100);
+	let addAttendanceOpen = $state(false);
+	let isSubmitting = $state(false);
+	let subjectOptions = $state<string[]>([]);
+
+	const createAttendanceForm = () => ({
+		subject: subjectOptions[0] ?? data.subjectOptions[0] ?? '',
+		date: new Date().toISOString().slice(0, 10),
+		wasPresent: '1',
+		scheduleEntryId: ''
+	});
+
+	let attendanceForm = $state(createAttendanceForm());
+	let newSubjectOption = $state('');
+
+	$effect(() => {
+		subjectOptions = [...data.subjectOptions];
+	});
+
+	$effect(() => {
+		if (!form?.message) {
+			return;
+		}
+
+		attendanceForm = {
+			subject: form.subject ?? subjectOptions[0] ?? '',
+			date: form.date ?? new Date().toISOString().slice(0, 10),
+			wasPresent: form.wasPresent ?? '1',
+			scheduleEntryId: form.scheduleEntryId ?? ''
+		};
+		addAttendanceOpen = true;
+	});
+
+	const scheduleOptionsForSubject = $derived(
+		data.scheduleOptions.filter((option) => option.subject === attendanceForm.subject)
+	);
+
+	const resetAttendanceForm = () => {
+		attendanceForm = createAttendanceForm();
+		newSubjectOption = '';
+	};
+
+	const openAddAttendance = () => {
+		resetAttendanceForm();
+		addAttendanceOpen = true;
+	};
+
+	const closeAddAttendance = () => {
+		addAttendanceOpen = false;
+	};
+
+	const addSubjectOption = () => {
+		const value = newSubjectOption.trim();
+
+		if (!value || subjectOptions.some((option) => option.toLowerCase() === value.toLowerCase())) {
+			return;
+		}
+
+		subjectOptions = [...subjectOptions, value].sort((left, right) =>
+			left.localeCompare(right, 'pl')
+		);
+		attendanceForm.subject = value;
+		attendanceForm.scheduleEntryId = '';
+		newSubjectOption = '';
+	};
 
 	const toneForPresence = (present: boolean) => (present ? 'green' : 'red');
 	const statusForPresence = (present: boolean) => (present ? 'Obecny' : 'Nieobecny');
@@ -39,10 +108,105 @@
 	<title>Frekwencja - PASTA</title>
 </svelte:head>
 
-<section class="page-heading" aria-labelledby="attendance-title">
-	<h1 id="attendance-title">Frekwencja</h1>
-	<p>Zarządzaj obecnościami i śledź postępy</p>
-</section>
+<div class="page-head-row">
+	<section aria-labelledby="attendance-title" class="page-heading">
+		<h1 id="attendance-title">Frekwencja</h1>
+		<p>Zarządzaj obecnościami i śledź postępy</p>
+	</section>
+	<button class="action-button" onclick={openAddAttendance} type="button">
+		<span aria-hidden="true">+</span>Dodaj obecność
+	</button>
+</div>
+
+{#if addAttendanceOpen}
+	<section class="panel add-panel" aria-labelledby="add-attendance-title">
+		<header>
+			<div>
+				<h2 id="add-attendance-title">Dodaj obecność</h2>
+				<p>Dodaj nowy wpis do historii frekwencji.</p>
+			</div>
+		</header>
+		<form
+			action="?/addAttendance"
+			aria-busy={isSubmitting}
+			class="add-form"
+			method="POST"
+			use:enhance={() => {
+				isSubmitting = true;
+
+				return async ({ result, update }) => {
+					try {
+						await update();
+
+						if (result.type === 'redirect') {
+							closeAddAttendance();
+						}
+					} finally {
+						isSubmitting = false;
+					}
+				};
+			}}
+		>
+			<div class="form-grid">
+				<label class="field-group full">
+					<span>Przedmiot</span>
+					<select
+						bind:value={attendanceForm.subject}
+						name="subject"
+						required
+						onchange={() => (attendanceForm.scheduleEntryId = '')}
+					>
+						{#each subjectOptions as subjectOption (subjectOption)}
+							<option value={subjectOption}>{subjectOption}</option>
+						{/each}
+					</select>
+					<div class="inline-add-row">
+						<input bind:value={newSubjectOption} placeholder="Dodaj nowy przedmiot" />
+						<button class="ghost-button" type="button" onclick={addSubjectOption}>Dodaj</button>
+					</div>
+				</label>
+				<label class="field-group">
+					<span>Data</span>
+					<input bind:value={attendanceForm.date} type="date" name="date" required />
+				</label>
+				<label class="field-group">
+					<span>Status</span>
+					<select bind:value={attendanceForm.wasPresent} name="wasPresent" required>
+						<option value="1">Obecny</option>
+						<option value="0">Nieobecny</option>
+					</select>
+				</label>
+				<label class="field-group full">
+					<span>Pozycja planu</span>
+					<select bind:value={attendanceForm.scheduleEntryId} name="scheduleEntryId">
+						<option value="">Bez pozycji planu</option>
+						{#each scheduleOptionsForSubject as scheduleOption (scheduleOption.id)}
+							<option value={String(scheduleOption.id)}>{scheduleOption.label}</option>
+						{/each}
+					</select>
+				</label>
+			</div>
+
+			{#if form?.message}
+				<p class="auth-error" role="alert">{form.message}</p>
+			{/if}
+
+			<div class="form-actions">
+				<button
+					class="ghost-button"
+					type="button"
+					onclick={closeAddAttendance}
+					disabled={isSubmitting}
+				>
+					Anuluj
+				</button>
+				<button class="action-button" type="submit" disabled={isSubmitting}>
+					<span aria-hidden="true">+</span>{isSubmitting ? 'Zapisywanie...' : 'Dodaj obecność'}
+				</button>
+			</div>
+		</form>
+	</section>
+{/if}
 
 <section class="attendance-stats" aria-label="Podsumowanie frekwencji">
 	<SummaryCard

@@ -72,7 +72,7 @@
 			Ostatnie oceny
 		</h2>
 		<div class="stack">
-			{#each grades as grade (`${grade.subject}-${grade.date}-${grade.value}`)}
+			{#each grades as grade (grade.id)}
 				<DashboardGradeCard {...grade} />
 			{/each}
 		</div>
