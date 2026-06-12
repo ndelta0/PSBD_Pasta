@@ -28,7 +28,7 @@
 </section>
 
 <section aria-label="Lista przedmiotów" class="subject-grid">
-	{#each subjects as subject (subject.code)}
+	{#each subjects as subject (subject.id)}
 		<SubjectCard {...subject} />
 	{/each}
 </section>

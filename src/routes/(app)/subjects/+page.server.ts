@@ -4,6 +4,7 @@ import type { User } from '$lib/types';
 import db from '$lib/server/db';
 
 export interface Subject {
+	id: number;
 	name: string;
 	code: string;
 	semesterName: string;
@@ -55,6 +56,7 @@ const loadSubjects = async (user: User | null): Promise<SubjectData> => {
 
 	return {
 		subjects: rows.map((row) => ({
+			id: row.subjectId,
 			name: row.name,
 			code: row.code ?? '',
 			semesterName: row.semesterName,
