@@ -1,9 +1,11 @@
 <script lang="ts">
 	import { utils } from '$lib';
+	import templateSubjectSummary from '$lib/templates/subject_summary.html?raw';
 
 	interface Props {
 		name: string;
 		code: string;
+		semesterName: string;
 		description?: string;
 		ects: number;
 		coordinator: string;
@@ -16,6 +18,7 @@
 	const {
 		name,
 		code,
+		semesterName,
 		description,
 		ects,
 		coordinator,
@@ -24,6 +27,80 @@
 		types,
 		presenceMandatory
 	}: Props = $props();
+
+	const escapeHtml = (value: string | number) =>
+		String(value)
+			.replaceAll('&', '&amp;')
+			.replaceAll('<', '&lt;')
+			.replaceAll('>', '&gt;')
+			.replaceAll('"', '&quot;')
+			.replaceAll('\'', '&#39;');
+
+	const filenameForSubject = (subjectName: string) =>
+		`podsumowanie-${subjectName
+			.toLowerCase()
+			.normalize('NFD')
+			.replace(/[\u0300-\u036f]/g, '')
+			.replace(/[^a-z0-9]+/g, '-')
+			.replace(/(^-|-$)/g, '')}.html`;
+
+	const subjectTypeLabels = $derived(
+		types.map((type) => (typeof type === 'string' ? type : type.label))
+	);
+
+	const buildSubjectSummaryHtml = () => {
+		const generatedAt = new Intl.DateTimeFormat('pl-PL', {
+			dateStyle: 'long',
+			timeStyle: 'short'
+		}).format(new Date());
+
+		const summaryDescription = description?.trim() || 'Brak opisu dla tego przedmiotu.';
+		const teachersList = [coordinator, ...teachers.filter((teacher) => teacher !== coordinator)]
+			.map((teacher) => `<span class="pill neutral">${escapeHtml(teacher)}</span>`)
+			.join('');
+		const typesList = types
+			.map((type) => {
+				if (typeof type === 'string') {
+					return `<span class="pill ${utils.getToneForClassType(type)}">${escapeHtml(type)}</span>`;
+				}
+
+				return `<span class="pill ${utils.getToneForClassType(type.label, type.tone)}">${escapeHtml(type.label)}</span>`;
+			})
+			.join('');
+
+		return templateSubjectSummary
+			.replaceAll('{{SUBJECT_NAME}}', escapeHtml(name))
+			.replaceAll('{{SUBJECT_CODE}}', code ? ` (${escapeHtml(code)})` : '')
+			.replaceAll('{{GENERATED_AT}}', generatedAt)
+			.replaceAll('{{SEMESTER_NAME}}', escapeHtml(semesterName))
+			.replaceAll('{{PRESENCE_LABEL}}', presenceMandatory ? 'Obowiązkowy' : 'Nieobowiązkowy')
+			.replaceAll('{{ECTS}}', ects.toString())
+			.replaceAll('{{TEACHERS_COUNT}}', teachers.length.toString())
+			.replaceAll('{{TYPES_COUNT}}', subjectTypeLabels.length.toString())
+			.replaceAll('{{COORDINATOR}}', escapeHtml(coordinator))
+			.replaceAll('{{COORDINATOR_EMAIL}}', escapeHtml(coordinatorEmail))
+			.replaceAll('{{DESCRIPTION}}', escapeHtml(summaryDescription))
+			.replaceAll(
+				'{{TEACHERS_LIST}}',
+				teachersList || '<span class="pill muted">Brak danych</span>'
+			)
+			.replaceAll('{{TYPES_LIST}}', typesList || '<span class="pill muted">Brak danych</span>');
+	};
+
+	const downloadSubjectSummary = () => {
+		const blob = new Blob([buildSubjectSummaryHtml()], {
+			type: 'text/html;charset=utf-8'
+		});
+		const url = URL.createObjectURL(blob);
+		const link = document.createElement('a');
+
+		link.href = url;
+		link.download = filenameForSubject(name);
+		document.body.append(link);
+		link.click();
+		link.remove();
+		setTimeout(() => URL.revokeObjectURL(url), 0);
+	};
 </script>
 
 <article class="panel subject-card">
@@ -32,9 +109,19 @@
 			<h2>{name}</h2>
 			<p>{code}</p>
 		</div>
-		<span class:elective={presenceMandatory}
+		<div class="subject-card-actions">
+			<button
+				aria-label={`Pobierz podsumowanie przedmiotu ${name} jako HTML`}
+				class="ghost-button subject-download-button"
+				onclick={downloadSubjectSummary}
+				type="button"
+			>
+				Pobierz HTML
+			</button>
+			<span class:elective={presenceMandatory}
 			>{presenceMandatory ? 'Obowiązkowy' : 'Nieobowiązkowy'}</span
-		>
+			>
+		</div>
 	</header>
 
 	<p class="subject-description">{description}</p>

@@ -6,6 +6,7 @@ import db from '$lib/server/db';
 export interface Subject {
 	name: string;
 	code: string;
+	semesterName: string;
 	description?: string;
 	ects: number;
 	coordinator: string;
@@ -56,6 +57,7 @@ const loadSubjects = async (user: User | null): Promise<SubjectData> => {
 		subjects: rows.map((row) => ({
 			name: row.name,
 			code: row.code ?? '',
+			semesterName: row.semesterName,
 			description: row.description ?? undefined,
 			ects: Number(row.ects ?? 0),
 			coordinator: row.coordinatorName ?? '',
