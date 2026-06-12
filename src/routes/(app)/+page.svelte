@@ -38,13 +38,13 @@
 	/>
 	<DashboardStatCard
 		accent="#54c69a"
-		icon="trend"
+		icon="trend2"
 		title="Średnia ocen"
 		value={overview.gradeAverage}
 	/>
 	<DashboardStatCard
 		accent="#f0ad34"
-		icon="check"
+		icon="check2"
 		title="Frekwencja"
 		value={`${overview.attendancePct}%`}
 	/>

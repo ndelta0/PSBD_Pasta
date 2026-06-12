@@ -229,7 +229,7 @@
 			<h2>Średnia ocen</h2>
 			<p>{overallAverage.toFixed(2)}</p>
 		</div>
-		<span class="stat-icon" data-icon="trend" style:--accent="#54c69a" aria-hidden="true"></span>
+		<span aria-hidden="true" class="stat-icon" data-icon="trend2" style:--accent="#54c69a"></span>
 	</article>
 </section>
 
