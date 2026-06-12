@@ -159,6 +159,28 @@
           white-space: pre-wrap;
       }
 
+      .grades-table {
+          width: 100%;
+          border-collapse: collapse;
+      }
+
+      .grades-table th,
+      .grades-table td {
+          border-bottom: 1px solid #e6e6e6;
+          padding: 10px 8px;
+          text-align: left;
+      }
+
+      .grades-table th {
+          font-size: 12px;
+      }
+
+      .empty {
+          margin: 0;
+          color: #6b6b6b;
+          font-size: 14px;
+      }
+
       .actions {
           margin-top: 28px;
       }
@@ -258,6 +280,23 @@
 		<section aria-labelledby="types-title" class="info-block">
 			<h2 id="types-title">Typy zajęć</h2>
 			<div class="pill-list">{{TYPES_LIST}}</div>
+		</section>
+
+		<section aria-labelledby="grades-title" class="info-block">
+			<h2 id="grades-title">Oceny</h2>
+			<table class="grades-table">
+				<thead>
+				<tr>
+					<th>Nazwa</th>
+					<th>Wartość</th>
+					<th>Waga</th>
+					<th>Data</th>
+				</tr>
+				</thead>
+				<tbody>
+				{{GRADE_ROWS}}
+				</tbody>
+			</table>
 		</section>
 	</div>
 

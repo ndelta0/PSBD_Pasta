@@ -13,6 +13,12 @@
 		teachers: string[];
 		types: ({ label: string; tone?: string } | string)[];
 		presenceMandatory: boolean;
+		grades: {
+			name: string;
+			value: number;
+			weight: number;
+			date: string;
+		}[];
 	}
 
 	const {
@@ -25,7 +31,8 @@
 		coordinatorEmail,
 		teachers,
 		types,
-		presenceMandatory
+		presenceMandatory,
+		grades
 	}: Props = $props();
 
 	const escapeHtml = (value: string | number) =>
@@ -46,6 +53,23 @@
 
 	const subjectTypeLabels = $derived(
 		types.map((type) => (typeof type === 'string' ? type : type.label))
+	);
+
+	const gradeRows = $derived(
+		grades.length > 0
+			? grades
+				.map(
+					(grade) => `
+							<tr>
+								<td>${escapeHtml(grade.name)}</td>
+								<td>${grade.value.toFixed(1)}</td>
+								<td>${grade.weight}</td>
+								<td>${escapeHtml(grade.date)}</td>
+							</tr>
+						`
+				)
+				.join('')
+			: '<tr><td colspan="4">Brak ocen dla tego przedmiotu.</td></tr>'
 	);
 
 	const buildSubjectSummaryHtml = () => {
@@ -80,6 +104,7 @@
 			.replaceAll('{{COORDINATOR}}', escapeHtml(coordinator))
 			.replaceAll('{{COORDINATOR_EMAIL}}', escapeHtml(coordinatorEmail))
 			.replaceAll('{{DESCRIPTION}}', escapeHtml(summaryDescription))
+			.replaceAll('{{GRADE_ROWS}}', gradeRows)
 			.replaceAll(
 				'{{TEACHERS_LIST}}',
 				teachersList || '<span class="pill muted">Brak danych</span>'

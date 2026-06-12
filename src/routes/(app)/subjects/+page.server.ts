@@ -15,6 +15,12 @@ export interface Subject {
 	teachers: string[];
 	types: ({ label: string; tone?: string } | string)[];
 	presenceMandatory: boolean;
+	grades: {
+		name: string;
+		value: number;
+		weight: number;
+		date: string;
+	}[];
 }
 
 export interface SubjectData {
@@ -36,6 +42,15 @@ type SubjectDetailsRow = RowDataPacket & {
 	classTypes: string | null;
 };
 
+type GradeDetailRow = RowDataPacket & {
+	gradeId: number;
+	subjectId: number;
+	value: number | string;
+	weight: number | string;
+	gradedOn: string;
+	name: string;
+};
+
 const splitList = (value: string | null): string[] => {
 	if (!value) return [];
 	return value.split(';').filter(Boolean);
@@ -54,6 +69,37 @@ const loadSubjects = async (user: User | null): Promise<SubjectData> => {
 		[user.id]
 	);
 
+	const [gradeRows] = await db.execute<GradeDetailRow[]>(
+		`
+		SELECT
+			gradeId,
+			subjectId,
+			value,
+			weight,
+			gradedOn,
+			name
+		FROM v_grade_details
+		WHERE userId = ?
+		ORDER BY subjectName, gradedOn DESC, gradeId DESC
+		`,
+		[user.id]
+	);
+
+	const gradesBySubject = new Map<number, Subject['grades']>();
+
+	for (const row of gradeRows) {
+		const grades = gradesBySubject.get(row.subjectId) ?? [];
+
+		grades.push({
+			name: row.name,
+			value: Number(row.value),
+			weight: Number(row.weight),
+			date: row.gradedOn.slice(0, 10)
+		});
+
+		gradesBySubject.set(row.subjectId, grades);
+	}
+
 	return {
 		subjects: rows.map((row) => ({
 			id: row.subjectId,
@@ -66,7 +112,8 @@ const loadSubjects = async (user: User | null): Promise<SubjectData> => {
 			coordinatorEmail: row.coordinatorEmail ?? '',
 			teachers: splitList(row.teachers),
 			types: splitList(row.classTypes),
-			presenceMandatory: Boolean(row.presenceMandatory)
+			presenceMandatory: Boolean(row.presenceMandatory),
+			grades: gradesBySubject.get(row.subjectId) ?? []
 		}))
 	};
 };
